@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+
 const connectDB = require("../config/db");
 const Staff = require("../models/staff");
 
@@ -7,17 +9,22 @@ const StaffService = {
    * Service to create a new staff member.
    */
   createStaff: async (staffData) => {
-    await connectDB();
+    await connectDB(); // Connect to the database
     try {
-      const newStaff = await Staff.create(staffData);
-      return { success: true, data: newStaff };
+        // Hash the password before saving
+        const hashedPassword = await bcrypt.hash(staffData.password, 10); // 10 is the salt rounds
+        staffData.password = hashedPassword; // Replace the plain text password with the hashed one
+
+        // Create the new staff member
+        const newStaff = await Staff.create(staffData);
+        return { success: true, data: newStaff };
     } catch (error) {
-      console.error("Error inserting staff:", error);
-      return { success: false, error: error.message };
+        console.error("Error inserting staff:", error);
+        return { success: false, error: error.message };
     } finally {
-      await mongoose.connection.close();
+        await mongoose.connection.close(); // Close the connection
     }
-  },
+},
 
   /**
    * Service to get all staff members.
