@@ -2,19 +2,107 @@ const mongoose = require("mongoose");
 const connectDB = require("../config/db");
 const Staff = require("../models/staff");
 
-const createStaff = async (staffData) => {
-  await connectDB();
-  try {
-    const newStaff = await Staff.create(staffData);
-    console.log("Staff inserted successfully!");
-    return { success: true, data: newStaff };
-  } catch (error) {
-    console.error("Error inserting staff:", error);
-    return { success: false, error: error.message };
-  } finally {
-    await mongoose.connection.close(); // Disconnects from the DB
-    console.log("Database connection closed.");
-  }
+const StaffService = {
+  /**
+   * Service to create a new staff member.
+   */
+  createStaff: async (staffData) => {
+    await connectDB();
+    try {
+      const newStaff = await Staff.create(staffData);
+      return { success: true, data: newStaff };
+    } catch (error) {
+      console.error("Error inserting staff:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
+
+  /**
+   * Service to get all staff members.
+   */
+  getAllStaff: async ({ limit, offset, sort, where }) => {
+    await connectDB();
+    try {
+      const staffList = await Staff.find(where)
+        .sort(sort)
+        .skip(offset)
+        .limit(limit);
+
+      const totalRecords = await Staff.countDocuments(where);
+
+      return { success: true, totalRecords, data: staffList };
+    } catch (error) {
+      console.error("Error fetching staff:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
+
+  /**
+   * Service to get a staff member by email.
+   */
+  getStaffByEmail: async (email) => {
+    await connectDB();
+    try {
+      const staff = await Staff.findOne({ email });
+      if (!staff) {
+        return { success: false, message: "Staff not found" };
+      }
+      return { success: true, data: staff };
+    } catch (error) {
+      console.error("Error fetching staff by email:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
+
+  /**
+   * Service to update a staff member by email.
+   */
+  updateStaffByEmail: async (email, updatedData) => {
+    await connectDB();
+    try {
+      const updatedStaff = await Staff.findOneAndUpdate(
+        { email },
+        updatedData,
+        {
+          new: true,
+        }
+      );
+      if (!updatedStaff) {
+        return { success: false, message: "Staff not found" };
+      }
+      return { success: true, data: updatedStaff };
+    } catch (error) {
+      console.error("Error updating staff:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
+
+  /**
+   * Service to delete a staff member by email.
+   */
+  deleteStaffByEmail: async (email) => {
+    await connectDB();
+    try {
+      const deletedStaff = await Staff.findOneAndDelete({ email });
+      if (!deletedStaff) {
+        return { success: false, message: "Staff not found" };
+      }
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting staff:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
 };
 
-module.exports = { createStaff };
+module.exports = StaffService;
