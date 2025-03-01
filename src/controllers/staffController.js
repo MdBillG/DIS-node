@@ -1,8 +1,8 @@
-const { insertStaff } = require("../services/staff-service");
+const { createStaff } = require("../services/staff-service");
 
 const addStaff = async (req, res) => {
   const staffData = req.body;
-  const result = await insertStaff(staffData);
+  const result = await createStaff(staffData);
 
   if (result.success) {
     return res.status(201).json({
