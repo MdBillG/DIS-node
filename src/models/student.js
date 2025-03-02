@@ -6,6 +6,8 @@ const StudentSchema = new mongoose.Schema({
   rollNumber: String,
   class: String,
   assignedTeacher: String,
+  dob:String,
+  dateofadmission:String,
   aadhar: String,
   contactNumber: String,
   fatherName: String,
