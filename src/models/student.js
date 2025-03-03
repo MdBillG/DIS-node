@@ -7,6 +7,7 @@ const StudentSchema = new mongoose.Schema({
   class: String,
   assignedTeacher: String,
   dob:String,
+  batch:String,
   dateofadmission:String,
   aadhar: String,
   contactNumber: String,
