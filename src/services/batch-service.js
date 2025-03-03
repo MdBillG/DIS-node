@@ -232,6 +232,34 @@ getAllBatches: async ({ sort, offset, limit }) => {
     finally{
         await mongoose.connection.close();
     }
+},
+getStudentsByBatchAndTeacher: async (batchId, teacherId) => {
+  await connectDB()
+  try {
+    if (!batchId || !teacherId) {
+      throw new Error("Batch ID and Teacher ID are required");
+    }
+
+    // Find batch and check assigned teacher
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      throw new Error("Batch not found");
+    }
+
+    if (!batch.assignedTeacher || batch.assignedTeacher.toString() !== teacherId) {
+      throw new Error("This teacher is not assigned to the given batch");
+    }
+
+    // Fetch students from the batch with the given teacher
+    const students = await Student.find({ batch: batchId, assignedTeacher: teacherId });
+
+    return students;
+  } catch (error) {
+    console.error("Error fetching students by batch and teacher:", error);
+  }
+  finally{
+    await mongoose.connection.close();
+}
 }
    
 };

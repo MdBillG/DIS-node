@@ -94,6 +94,24 @@ const BatchController ={
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
+    },
+    getAllStudentsByBatchAndTeacher: async (req, res) => {
+      try {
+        const { batchId, teacherId } = req.params;
+  
+        const students = await BatchService.getStudentsByBatchAndTeacher(batchId, teacherId);
+  
+        return res.status(200).json({
+          success: true,
+          message: "Students retrieved successfully",
+          data: students,
+        });
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
     }
 }
 
