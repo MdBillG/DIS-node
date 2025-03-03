@@ -30,25 +30,28 @@ const BatchService = {
   addStudentToBatch: async (batchId, studentId) => {
     await connectDB();
     try {
-        const batch = await Batch.findByIdAndUpdate(
-            batchId,
-            { $addToSet: { students: studentId } }, // Prevent duplicates
-            { new: true }
-        ).populate("students");
+      // 1️⃣ Fetch the batch to get assigned teacher
+      const batch = await Batch.findById(batchId);
+      if (!batch) {
+        return { success: false, message: "Batch not found" };
+      }
 
-        if (!batch) {
-            return { success: false, message: "Batch not found" };
-        }
+      // 2️⃣ Add student to the batch (prevent duplicates)
+      await Batch.findByIdAndUpdate(
+        batchId,
+        { $addToSet: { students: studentId } },
+        { new: true }
+      );
 
-        // 2️⃣ Update the student's batch field
-        const student = await Student.findByIdAndUpdate(
-            studentId,
-            { batch: batchId },
-            { new: true }
-        );
+      // 3️⃣ Assign batch ID and teacher to student
+      const updateData = { batch: batchId };
+      if (batch.assignedTeacher) {
+        updateData.assignedTeacher = batch.assignedTeacher; // Assign teacher if exists
+      }
 
-        return { success: true, message: "Student assigned to batch", batch, student };
-   
+      const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
+
+      return { success: true, message: "Student assigned to batch", student };
     } catch (error) {
       console.error("Error adding student to batch:", error);
       return { success: false, error: error.message };
@@ -232,6 +235,34 @@ getAllBatches: async ({ sort, offset, limit }) => {
     finally{
         await mongoose.connection.close();
     }
+},
+getStudentsByBatchAndTeacher: async (batchId, teacherId) => {
+  await connectDB()
+  try {
+    if (!batchId || !teacherId) {
+      throw new Error("Batch ID and Teacher ID are required");
+    }
+
+    // Find batch and check assigned teacher
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      throw new Error("Batch not found");
+    }
+
+    if (!batch.assignedTeacher || batch.assignedTeacher.toString() !== teacherId) {
+      throw new Error("This teacher is not assigned to the given batch");
+    }
+
+    // Fetch students from the batch with the given teacher
+    const students = await Student.find({ batch: batchId, assignedTeacher: teacherId });
+
+    return students;
+  } catch (error) {
+    console.error("Error fetching students by batch and teacher:", error);
+  }
+  finally{
+    await mongoose.connection.close();
+}
 }
    
 };

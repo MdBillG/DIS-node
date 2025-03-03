@@ -12,5 +12,6 @@ router.post("/remove-teacher", BatchController.removeTeacherFromBatch);
 router.get("/:batchId", BatchController.getBatchById);
 router.delete("/:batchId", BatchController.deleteBatchById);
 router.get("/", BatchController.getAllBatches);
+router.get("/:batchId/teacher/:teacherId/students", BatchController.getAllStudentsByBatchAndTeacher);
 
 module.exports = router;

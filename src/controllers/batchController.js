@@ -17,14 +17,23 @@ const BatchController ={
         }
     },
     addStudentToBatch: async (req, res) => {
-        try {
-          const { batchId, studentId } = req.body;
-          const batch = await BatchService.addStudentToBatch(batchId, studentId);
-          res.status(200).json({ success: true, batch });
-        } catch (error) {
-          res.status(400).json({ success: false, error: error.message });
+      try {
+        const { batchId, studentId } = req.body;
+        const result = await BatchService.addStudentToBatch(batchId, studentId);
+  
+        if (!result.success) {
+          return res.status(404).json({ success: false, message: result.message });
         }
-      },
+  
+        res.status(200).json({
+          success: true,
+          message: "Student assigned to batch",
+          student: result.student, // Send updated student details
+        });
+      } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+      }
+    },
     
       // Remove a student from a batch
       removeStudentFromBatch: async (req, res) => {
@@ -94,6 +103,24 @@ const BatchController ={
         } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
+    },
+    getAllStudentsByBatchAndTeacher: async (req, res) => {
+      try {
+        const { batchId, teacherId } = req.params;
+  
+        const students = await BatchService.getStudentsByBatchAndTeacher(batchId, teacherId);
+  
+        return res.status(200).json({
+          success: true,
+          message: "Students retrieved successfully",
+          data: students,
+        });
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+      }
     }
 }
 
