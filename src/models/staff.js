@@ -13,7 +13,6 @@ const StaffSchema = new mongoose.Schema({
   profilePhoto: Object,
   education: Array,
   joiningDate: String,
-  batch:String,
   role: {
     type: String,
     enum: Object.values(ROLES),

@@ -30,15 +30,25 @@ const BatchService = {
   addStudentToBatch: async (batchId, studentId) => {
     await connectDB();
     try {
-      const batch = await Batch.findById(batchId);
-      const student = await Student.findById(studentId);
-      if (!batch || !student) throw new Error("Batch or Student not found");
+        const batch = await Batch.findByIdAndUpdate(
+            batchId,
+            { $addToSet: { students: studentId } }, // Prevent duplicates
+            { new: true }
+        ).populate("students");
 
-      if (!batch.students.includes(studentId)) {
-        batch.students.push(studentId);
-        await batch.save();
-      }
-      return batch;
+        if (!batch) {
+            return { success: false, message: "Batch not found" };
+        }
+
+        // 2️⃣ Update the student's batch field
+        const student = await Student.findByIdAndUpdate(
+            studentId,
+            { batch: batchId },
+            { new: true }
+        );
+
+        return { success: true, message: "Student assigned to batch", batch, student };
+   
     } catch (error) {
       console.error("Error adding student to batch:", error);
       return { success: false, error: error.message };
@@ -51,14 +61,23 @@ const BatchService = {
   removeStudentFromBatch: async (batchId, studentId) => {
     await connectDB();
     try {
-      const batch = await Batch.findById(batchId);
-      if (!batch) throw new Error("Batch not found");
+        const batch = await Batch.findByIdAndUpdate(
+            batchId,
+            { $pull: { students: studentId } }, // Remove student from array
+            { new: true }
+        ).populate("students");
 
-      batch.students = batch.students.filter(
-        (id) => id.toString() !== studentId
-      );
-      await batch.save();
-      return batch;
+        if (!batch) {
+            return { success: false, message: "Batch not found" };
+        }
+
+        // 2️⃣ Update the student's batch field to `null`
+        const student = await Student.findByIdAndUpdate(
+            studentId,
+            { batch: null },
+            { new: true }
+        );
+        return { success: true, message: "Student removed from batch", batch, student };
     } catch (error) {
       console.error("Error adding student to batch:", error);
       return { success: false, error: error.message };
