@@ -90,13 +90,32 @@ const BatchService = {
   assignTeacherToBatch: async (batchId, teacherId) => {
     await connectDB();
     try {
-      const batch = await Batch.findById(batchId);
-      const teacher = await Staff.findById(teacherId);
-      if (!batch || !teacher) throw new Error("Batch or Teacher not found");
-
-      batch.assignedTeacher = teacherId;
-      await batch.save();
-      return batch;
+        if (!batchId || !teacherId) {
+            throw new Error("Batch ID or Teacher ID is missing");
+          }
+        
+          // 1️⃣ Find the batch
+          const batch = await Batch.findById(batchId);
+          if (!batch) {
+            throw new Error("Batch not found");
+          }
+        
+          // 2️⃣ Find the teacher
+          const teacher = await Staff.findById(teacherId);
+          if (!teacher) {
+            throw new Error("Teacher not found");
+          }
+        
+          // 3️⃣ Assign teacher to batch
+          batch.assignedTeacher = [teacherId];
+          await batch.save();
+        
+          // 4️⃣ Update teacher's assignedBatch in the staff model
+          teacher.assignedBatch = batchId;
+          await teacher.save();
+    
+        return { success: true, message: "Teacher assigned successfully", batch, teacher };
+     
     } catch (error) {
       console.error("Error assigning teacher to batch:", error);
       return { success: false, error: error.message };
@@ -106,14 +125,38 @@ const BatchService = {
   },
 
   // Remove a teacher from a batch
-  removeTeacherFromBatch: async (batchId) => {
+  removeTeacherFromBatch: async (batchId,teacherId) => {
     await connectDB();
     try {
-      const batch = await Batch.findById(batchId);
-      if (!batch) throw new Error("Batch not found");
-      batch.assignedTeacher = null;
-      await batch.save();
-      return batch;
+        if (!batchId || !teacherId) {
+            throw new Error("Batch ID or Teacher ID is missing");
+          }
+        
+          // 1️⃣ Find the batch
+          const batch = await Batch.findById(batchId);
+          if (!batch) {
+            throw new Error("Batch not found");
+          }
+        
+          // 2️⃣ Find the teacher
+          const teacher = await Staff.findById(teacherId);
+          if (!teacher) {
+            throw new Error("Teacher not found");
+          }
+        
+          // 3️⃣ Check if the teacher is assigned to this batch
+          if (!batch.assignedTeacher.includes(teacherId)) {
+            throw new Error("Teacher is not assigned to this batch");
+          }
+        
+          // 4️⃣ Remove teacher from batch
+          batch.assignedTeacher = [];
+          await batch.save();
+        
+          // 5️⃣ Remove assignedBatch from the teacher in the staff model
+          teacher.assignedBatch = null;
+          await teacher.save();
+          return { success: true, message: "Teacher removed successfully", batch, teacher };
     } catch (error) {
       console.error("Error removing teacher from batch:", error);
       return { success: false, error: error.message };

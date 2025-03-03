@@ -51,8 +51,8 @@ const BatchController ={
       // Remove a teacher from a batch
       removeTeacherFromBatch: async (req, res) => {
         try {
-          const { batchId } = req.body;
-          const batch = await BatchService.removeTeacherFromBatch(batchId);
+            const { batchId, teacherId } = req.body;
+          const batch = await BatchService.removeTeacherFromBatch(batchId,teacherId);
           res.status(200).json({ success: true, batch });
         } catch (error) {
           res.status(400).json({ success: false, error: error.message });
