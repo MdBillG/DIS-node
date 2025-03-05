@@ -11,20 +11,20 @@ const StaffService = {
   createStaff: async (staffData) => {
     await connectDB(); // Connect to the database
     try {
-        // Hash the password before saving
-        const hashedPassword = await bcrypt.hash(staffData.password, 10); // 10 is the salt rounds
-        staffData.password = hashedPassword; // Replace the plain text password with the hashed one
+      // Hash the password before saving
+      const hashedPassword = await bcrypt.hash(staffData.password, 10); // 10 is the salt rounds
+      staffData.password = hashedPassword; // Replace the plain text password with the hashed one
 
-        // Create the new staff member
-        const newStaff = await Staff.create(staffData);
-        return { success: true, data: newStaff };
+      // Create the new staff member
+      const newStaff = await Staff.create(staffData);
+      return { success: true, data: newStaff };
     } catch (error) {
-        console.error("Error inserting staff:", error);
-        return { success: false, error: error.message };
+      console.error("Error inserting staff:", error);
+      return { success: false, error: error.message };
     } finally {
-        await mongoose.connection.close(); // Close the connection
+      await mongoose.connection.close(); // Close the connection
     }
-},
+  },
 
   /**
    * Service to get all staff members.

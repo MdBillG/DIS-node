@@ -4,7 +4,6 @@ const mongoose = require("mongoose");
 const Student = require("../models/student");
 const Staff = require("../models/staff");
 
-
 const BatchService = {
   createBatch: async (batchData) => {
     await connectDB();
@@ -49,7 +48,9 @@ const BatchService = {
         updateData.assignedTeacher = batch.assignedTeacher; // Assign teacher if exists
       }
 
-      const student = await Student.findByIdAndUpdate(studentId, updateData, { new: true });
+      const student = await Student.findByIdAndUpdate(studentId, updateData, {
+        new: true,
+      });
 
       return { success: true, message: "Student assigned to batch", student };
     } catch (error) {
@@ -64,23 +65,28 @@ const BatchService = {
   removeStudentFromBatch: async (batchId, studentId) => {
     await connectDB();
     try {
-        const batch = await Batch.findByIdAndUpdate(
-            batchId,
-            { $pull: { students: studentId } }, // Remove student from array
-            { new: true }
-        ).populate("students");
+      const batch = await Batch.findByIdAndUpdate(
+        batchId,
+        { $pull: { students: studentId } }, // Remove student from array
+        { new: true }
+      ).populate("students");
 
-        if (!batch) {
-            return { success: false, message: "Batch not found" };
-        }
+      if (!batch) {
+        return { success: false, message: "Batch not found" };
+      }
 
-        // 2️⃣ Update the student's batch field to `null`
-        const student = await Student.findByIdAndUpdate(
-            studentId,
-            { batch: null },
-            { new: true }
-        );
-        return { success: true, message: "Student removed from batch", batch, student };
+      // 2️⃣ Update the student's batch field to `null`
+      const student = await Student.findByIdAndUpdate(
+        studentId,
+        { batch: null },
+        { new: true }
+      );
+      return {
+        success: true,
+        message: "Student removed from batch",
+        batch,
+        student,
+      };
     } catch (error) {
       console.error("Error adding student to batch:", error);
       return { success: false, error: error.message };
@@ -96,34 +102,39 @@ const BatchService = {
       if (!batchId || !teacherId) {
         throw new Error("Batch ID or Teacher ID is missing");
       }
-    
+
       // 1️⃣ Find the batch
       const batch = await Batch.findById(batchId);
       if (!batch) {
         throw new Error("Batch not found");
       }
-    
+
       // 2️⃣ Find the teacher
       const teacher = await Staff.findById(teacherId);
       if (!teacher) {
         throw new Error("Teacher not found");
       }
-    
+
       // 3️⃣ Update batch model
       batch.assignedTeacher = teacherId;
       await batch.save();
-    
+
       // 4️⃣ Update teacher in staff model
       teacher.assignedBatch = batchId;
       await teacher.save();
-    
+
       // 5️⃣ Update all students in the batch
       const studentsUpdated = await Student.updateMany(
         { batch: batchId }, // Find all students in the batch
         { $set: { assignedTeacher: teacherId } } // Assign the teacher
       );
-        return { success: true, message: "Teacher assigned successfully", batch, teacher, students: studentsUpdated };
-     
+      return {
+        success: true,
+        message: "Teacher assigned successfully",
+        batch,
+        teacher,
+        students: studentsUpdated,
+      };
     } catch (error) {
       console.error("Error assigning teacher to batch:", error);
       return { success: false, error: error.message };
@@ -139,43 +150,48 @@ const BatchService = {
       if (!batchId) {
         throw new Error("Batch ID is required");
       }
-    
+
       // Find the batch
       const batch = await Batch.findById(batchId);
       if (!batch) {
         throw new Error("Batch not found");
       }
-    
+
       // Check if a teacher is assigned
       const teacherId = batch.assignedTeacher;
       if (!teacherId) {
         throw new Error("No teacher assigned to this batch");
       }
-    
+
       // Remove teacher from batch
       batch.assignedTeacher = null;
       await batch.save();
-    
+
       // Remove teacher's batch reference in staff model
       const teacher = await Staff.findById(teacherId);
       if (teacher) {
         teacher.assignedBatch = null;
         await teacher.save();
       }
-    
+
       // Debug: Check if students exist in batch before removal
       const studentsBefore = await Student.find({ batch: batchId });
-    
+
       // Remove teacher from all students in the batch
       const result = await Student.updateMany(
-        { batch: batchId, assignedTeacher: teacherId },  // Ensure match
-        { $unset: { assignedTeacher: "" } }  // Remove field properly
+        { batch: batchId, assignedTeacher: teacherId }, // Ensure match
+        { $unset: { assignedTeacher: "" } } // Remove field properly
       );
-    
-    
+
       // Verify by fetching students after update
       const updatedStudents = await Student.find({ batch: batchId });
-          return { success: true, message: "Teacher removed successfully", batch, teacher, students: updatedStudents };
+      return {
+        success: true,
+        message: "Teacher removed successfully",
+        batch,
+        teacher,
+        students: updatedStudents,
+      };
     } catch (error) {
       console.error("Error removing teacher from batch:", error);
       return { success: false, error: error.message };
@@ -186,85 +202,80 @@ const BatchService = {
 
   getBatchById: async (batchId) => {
     await connectDB();
-    try{
-        const batch = await Batch.findById(batchId);
-        if (!batch) {
-            throw new Error("Batch not found");
-        }
-        return batch;
+    try {
+      const batch = await Batch.findById(batchId);
+      if (!batch) {
+        throw new Error("Batch not found");
+      }
+      return batch;
+    } catch (error) {
+      console.error("Error fetching batch by id:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
     }
-    catch(error){
-        console.error("Error fetching batch by id:", error);
-        return { success: false, error: error.message };
+  },
+  deleteBatchById: async (batchId) => {
+    await connectDB();
+    try {
+      const deletedBatch = await Batch.findByIdAndDelete(batchId);
+      if (!deletedBatch) {
+        throw new Error("Batch not found or already deleted");
+      }
+      return deletedBatch;
+    } catch (error) {
+      console.error("Error deleting batch by id:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
     }
-    finally{
-        await mongoose.connection.close();
+  },
+  getAllBatches: async ({ sort, offset, limit }) => {
+    await connectDB();
+    try {
+      const batches = await Batch.find().sort(sort).skip(offset).limit(limit);
+      const totalRecords = await Batch.countDocuments();
+      return { success: true, data: batches, totalRecords };
+    } catch (error) {
+      console.error("Error fetching all batches:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
     }
-},
-deleteBatchById: async (batchId) => {
-    await connectDB()
-    try{
-        const deletedBatch = await Batch.findByIdAndDelete(batchId);
-        if (!deletedBatch) {
-            throw new Error("Batch not found or already deleted");
-        }
-        return deletedBatch;
-    }
-    catch(error){
-        console.error("Error deleting batch by id:", error);
-        return { success: false, error: error.message };
-    }
-    finally{
-        await mongoose.connection.close();
-    }
-},
-getAllBatches: async ({ sort, offset, limit }) => {
-    await connectDB()
-    try{
-        const batches = await Batch.find()
-            .sort(sort)
-            .skip(offset)
-            .limit(limit);
-        const totalRecords = await Batch.countDocuments();
-        return { success: true, data: batches, totalRecords };
-    }
-    catch(error){
-        console.error("Error fetching all batches:", error);
-        return { success: false, error: error.message };
-    }
-    finally{
-        await mongoose.connection.close();
-    }
-},
-getStudentsByBatchAndTeacher: async (batchId, teacherId) => {
-  await connectDB()
-  try {
-    if (!batchId || !teacherId) {
-      throw new Error("Batch ID and Teacher ID are required");
-    }
+  },
+  getStudentsByBatchAndTeacher: async (batchId, teacherId) => {
+    await connectDB();
+    try {
+      if (!batchId || !teacherId) {
+        throw new Error("Batch ID and Teacher ID are required");
+      }
 
-    // Find batch and check assigned teacher
-    const batch = await Batch.findById(batchId);
-    if (!batch) {
-      throw new Error("Batch not found");
+      // Find batch and check assigned teacher
+      const batch = await Batch.findById(batchId);
+      if (!batch) {
+        throw new Error("Batch not found");
+      }
+
+      if (
+        !batch.assignedTeacher ||
+        batch.assignedTeacher.toString() !== teacherId
+      ) {
+        throw new Error("This teacher is not assigned to the given batch");
+      }
+
+      // Fetch students from the batch with the given teacher
+      const students = await Student.find({
+        batch: batchId,
+        assignedTeacher: teacherId,
+      });
+
+      return students;
+    } catch (error) {
+      console.error("Error fetching students by batch and teacher:", error);
+    } finally {
+      await mongoose.connection.close();
     }
-
-    if (!batch.assignedTeacher || batch.assignedTeacher.toString() !== teacherId) {
-      throw new Error("This teacher is not assigned to the given batch");
-    }
-
-    // Fetch students from the batch with the given teacher
-    const students = await Student.find({ batch: batchId, assignedTeacher: teacherId });
-
-    return students;
-  } catch (error) {
-    console.error("Error fetching students by batch and teacher:", error);
-  }
-  finally{
-    await mongoose.connection.close();
-}
-}
-   
+  },
 };
 
 module.exports = BatchService;

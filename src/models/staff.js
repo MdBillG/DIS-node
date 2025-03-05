@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const ROLES = require("../config/role");
+const ROLES = require("./role");
 
 const StaffSchema = new mongoose.Schema({
   firstName: String,
@@ -10,7 +10,7 @@ const StaffSchema = new mongoose.Schema({
   maritalStatus: String,
   address: Object,
   parentsName: String,
-  batch:String,
+  batch: String,
   profilePhoto: Object,
   education: Array,
   joiningDate: String,
