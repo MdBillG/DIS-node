@@ -3,42 +3,83 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const connectDB = require("../config/db");
+const tokenRegistry = new Map();
 
 const AuthService = {
-    login: async (email, password) => {
+  login: async (email, password) => {
+    await connectDB();
+    try {
+      const user = await User.findOne({ email });
 
-        await connectDB(); // Connect to the database
-        try {
-            // Find the user by email
-            const user = await User.findOne({ email });
+      if (!user) {
+        return { success: false, message: "User not found" };
+      }
 
-            if (!user) {
-                return { success: false, message: "User not found" };
-            }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return { success: false, message: "Invalid credentials" };
+      }
 
-            // Compare the password
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return { success: false, message: "Invalid credentials" };
-            }
+      const tokenResponse = await AuthService.generateToken(email);
+      if (!tokenResponse.success) {
+        return { success: false, message: "Token generation failed" };
+      }
 
-            // Generate JWT token
-            const token = jwt.sign(
-                { id: user._id, role: user.role }, // Include the user's role in the payload
-                process.env.JWT_SECRET, // Secret key
-                { expiresIn: "1h" } // Token expiration
-            );
+      const { password: _, ...userDetails } = user.toObject();
+      return { success: true, data: userDetails, token: tokenResponse.token };
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
 
-            // Return user details (excluding the password) and token
-            const { password: _, ...userDetails } = user.toObject();
-            return { success: true, data: { ...userDetails, token } };
-        } catch (error) {
-            console.error("Login error:", error);
-            return { success: false, error: error.message };
-        } finally {
-            await mongoose.connection.close(); // Close the connection
+  generateToken: async (email, expiresIn = "1h") => {
+    await connectDB();
+    try {
+      const user = await User.findOne({ email });
+      if (!user) {
+        return { success: false, message: "User not found" };
+      }
+
+      const userId = user._id.toString();
+
+      // Check if user has a valid token in the registry
+      if (tokenRegistry.has(userId)) {
+        const { token, expiry } = tokenRegistry.get(userId);
+        if (new Date(expiry) > new Date()) {
+          return { success: true, token };
         }
-    },
+      }
+
+      // Generate new token
+      const token = jwt.sign(
+        { id: userId, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn }
+      );
+
+      // Calculate expiry time
+      const expiry = new Date();
+      const timeValue = parseInt(expiresIn);
+      const timeUnit = expiresIn.slice(-1);
+
+      if (timeUnit === "h") expiry.setHours(expiry.getHours() + timeValue);
+      else if (timeUnit === "m")
+        expiry.setMinutes(expiry.getMinutes() + timeValue);
+
+      // Store in registry
+      tokenRegistry.set(userId, { token, expiry });
+
+      return { success: true, token };
+    } catch (error) {
+      console.error("Error generating token:", error);
+      return { success: false, error: error.message };
+    } finally {
+      await mongoose.connection.close();
+    }
+  },
 };
 
 module.exports = AuthService;
