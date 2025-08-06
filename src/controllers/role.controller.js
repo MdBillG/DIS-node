@@ -1,5 +1,5 @@
 const role = require("../models/role");
-const { createRoleService ,getRoleById} = require("../services/role.service");
+const { createRoleService ,getRoleById,deleteRoleByIdService} = require("../services/role.service");
 const { AppError } = require('../utils/errorHandler');
 
 /**
@@ -52,8 +52,23 @@ catch(error){
 }
 }
 
+const  deleteRoleByIdController = async (req,res,next)=>{
+    try{
+        const role=  await deleteRoleByIdService(req.params.id);
+        res.status(200).json({
+            success: true,
+            data: role
+        })
+    }
+    catch(error){
+        next(error);
+    }
+}
+
+
 module.exports = {
     createRoleController,
     getRolesController,
-    getRoleByIdController
+    getRoleByIdController,
+    deleteRoleByIdController
 };
