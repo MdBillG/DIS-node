@@ -1,7 +1,11 @@
 {
-  "name": "project",
+  "name": "dis-node-api",
   "version": "1.0.0",
-  "main": "database.js",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
   "dependencies": {
     "acorn": "^8.15.0",
     "acorn-walk": "^8.3.4",
@@ -61,9 +65,6 @@
     "webidl-conversions": "^7.0.0",
     "whatwg-url": "^14.2.0",
     "yn": "^3.1.1"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",

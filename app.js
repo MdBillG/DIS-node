@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 const connectToDB = require("./src/config/database");
 const { errorHandler, notFoundHandler } = require('./src/utils/errorHandler');
+const mongoose = require('mongoose');
 
 const app = express();
 
@@ -9,14 +10,36 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+    next();
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    res.status(200).json({
-        status: 'ok',
-        database: dbStatus,
+    const dbStatus = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting',
+        99: 'uninitialized'
+    }[mongoose.connection.readyState] || 'unknown';
+
+    const response = {
+        status: dbStatus === 'connected' ? 'ok' : 'error',
+        database: {
+            status: dbStatus,
+            readyState: mongoose.connection.readyState,
+            host: mongoose.connection.host || 'not connected',
+            name: mongoose.connection.name || 'not connected',
+            models: mongoose.modelNames()
+        },
         timestamp: new Date().toISOString()
-    });
+    };
+
+    const statusCode = dbStatus === 'connected' ? 200 : 503;
+    res.status(statusCode).json(response);
 });
 
 // Routes
