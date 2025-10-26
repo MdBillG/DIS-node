@@ -45,9 +45,11 @@ app.get('/health', (req, res) => {
 // Routes
 const roleRoutes = require("./src/routes/role.routes");
 const userRoutes = require("./src/routes/user.routes");
+const authRoutes = require("./src/routes/auth.routes");
 
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/auth", authRoutes);
 
 // 404 Handler
 app.use(notFoundHandler);
