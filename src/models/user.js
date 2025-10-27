@@ -98,6 +98,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'User role name is required']
   },
+    // Assigned batch for teacher (single) and student (array)
+    assignedBatch: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Batch'
+    }],
 
   isActive: {
     type: Boolean,

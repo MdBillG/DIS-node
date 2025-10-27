@@ -5,9 +5,12 @@ const {
   getBatchesController,
   getBatchByIdController,
   updateBatchByIdController,
-  deleteBatchByIdController
+  deleteBatchByIdController,
+  assignStudentsController,
+  assignTeacherController,
+  removeStudentsController,
+  removeTeacherController
 } = require('../controllers/batch.controller');
-const { assignStudentsController, assignTeacherController } = require('../controllers/batch.controller');
 
 const { verifyToken, hasRole, hasPermission } = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rateLimiter');
@@ -56,6 +59,20 @@ router.post('/:id/assign-teacher',
   hasRole('admin', 'principal'),
   hasPermission('batch', 'update'),
   assignTeacherController
+);
+
+// Remove students from batch
+router.post('/:id/remove-students',
+  hasRole('admin', 'principal', 'teacher'),
+  hasPermission('batch', 'update'),
+  removeStudentsController
+);
+
+// Remove teacher from batch
+router.post('/:id/remove-teacher',
+  hasRole('admin', 'principal'),
+  hasPermission('batch', 'update'),
+  removeTeacherController
 );
 
 // Delete batch

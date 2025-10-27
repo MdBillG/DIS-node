@@ -7,6 +7,7 @@ const {
   assignStudentsToBatch,
   assignTeacherToBatch
 } = require('../services/batch.service');
+const { removeStudentsFromBatch, removeTeacherFromBatch } = require('../services/batch.service');
 
 const createBatchController = async (req, res, next) => {
   try {
@@ -64,14 +65,6 @@ const deleteBatchByIdController = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  createBatchController,
-  getBatchesController,
-  getBatchByIdController,
-  updateBatchByIdController,
-  deleteBatchByIdController
-};
-
 // Assign students controller
 const assignStudentsController = async (req, res, next) => {
   try {
@@ -97,7 +90,28 @@ const assignTeacherController = async (req, res, next) => {
   }
 };
 
-// Add new exports
+// Remove students controller
+const removeStudentsController = async (req, res, next) => {
+  try {
+    const students = Array.isArray(req.body.students) ? req.body.students : [];
+    const result = await removeStudentsFromBatch(req.params.id, students);
+    res.status(200).json({ success: true, message: result.message, data: result.data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Remove teacher controller
+const removeTeacherController = async (req, res, next) => {
+  try {
+    const result = await removeTeacherFromBatch(req.params.id);
+    res.status(200).json({ success: true, message: result.message, data: result.data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Final exports
 module.exports = {
   createBatchController,
   getBatchesController,
@@ -105,5 +119,7 @@ module.exports = {
   updateBatchByIdController,
   deleteBatchByIdController,
   assignStudentsController,
-  assignTeacherController
+  assignTeacherController,
+  removeStudentsController,
+  removeTeacherController
 };

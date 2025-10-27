@@ -88,15 +88,23 @@ const getUsersService = async () => {
                 select: 'name displayName -_id',
                 model: 'Role'
             })
+            .populate({
+                path: 'assignedBatch',
+                select: 'name teacher',
+                populate: {
+                  path: 'teacher',
+                  select: 'fullName email roleName'
+                }
+            })
             .lean();
-            
+
         // Map the results to maintain backward compatibility with the frontend
         const formattedUsers = users.map(user => ({
             ...user,
             role: user.roleId, // Map roleId to role for backward compatibility
             roleId: user.roleId?._id // Keep the roleId as well if needed
         }));
-            
+
         return {
             success: true,
             count: formattedUsers.length,
