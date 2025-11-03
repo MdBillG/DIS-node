@@ -59,7 +59,8 @@ const loginController = async (req, res, next) => {
                     id: user._id,
                     email: user.email,
                     fullName: user.fullName,
-                    role: user.roleName
+                    role: user.roleName,
+                    mustChangePassword: user.mustChangePassword || false
                 },
                 token
             }

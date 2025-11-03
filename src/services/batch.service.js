@@ -60,9 +60,28 @@ const updateBatchByIdService = async (id, updateData) => {
 
 const deleteBatchByIdService = async (id) => {
   try {
-    const batch = await Batch.findByIdAndDelete(id);
+    const batch = await Batch.findById(id);
     if (!batch) throw new AppError(404, 'Batch not found');
-    return { success: true, message: 'Batch deleted successfully', data: batch };
+
+    // Remove batch reference from assigned students
+    if (batch.students && batch.students.length > 0) {
+      await User.updateMany(
+        { _id: { $in: batch.students } },
+        { $pull: { assignedBatch: batch._id } }
+      );
+    }
+
+    // Remove batch reference from teacher
+    if (batch.teacher) {
+      await User.updateOne(
+        { _id: batch.teacher },
+        { $pull: { assignedBatch: batch._id } }
+      );
+    }
+
+    // Delete the batch
+    const deleted = await Batch.findByIdAndDelete(id);
+    return { success: true, message: 'Batch deleted successfully', data: deleted };
   } catch (error) {
     throw error;
   }

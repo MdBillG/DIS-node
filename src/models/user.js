@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema({
   fatherName: {
     type: String,
     trim: true,
+
+  // If true, user must change password on next login
+  mustChangePassword: {
+    type: Boolean,
+    default: false
+  },
     default: ''
   },
 

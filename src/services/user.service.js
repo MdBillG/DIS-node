@@ -52,10 +52,12 @@ const createUserService = async (userData) => {
             throw new AppError(400, `Role not found with ID: ${userData.roleId}`);
         }
         
-        // Add roleName to userData
+        // Add roleName to userData and set mustChangePassword for teacher/principal
+        const shouldForceChange = ['teacher', 'principal'].includes(role.name) && userData.mustChangePassword !== false;
         const userDataWithRole = {
             ...userData,
-            roleName: role.name
+            roleName: role.name,
+            mustChangePassword: shouldForceChange
         };
         
         // Create new user with role name
@@ -120,3 +122,55 @@ module.exports = {
     createUserService,
     getUsersService
 };
+
+/**
+ * Admin resets a staff (teacher/principal) password by email. If newPassword is not provided,
+ * a secure temporary password is generated. The user's mustChangePassword flag is set to true.
+ * @param {String} email
+ * @param {String} newPassword
+ */
+const crypto = require('crypto');
+
+const adminResetPasswordService = async (email, newPassword) => {
+    try {
+        if (!email) throw new AppError(400, 'Email is required');
+
+        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+        if (!user) throw new AppError(404, 'User not found');
+
+        // Only allow resetting teacher or principal passwords via this admin action
+        if (!['teacher', 'principal'].includes(user.roleName)) {
+            throw new AppError(403, 'Admin can only reset passwords for teacher or principal accounts');
+        }
+
+        // Generate a temp password if none provided
+        let tempPassword = newPassword;
+        if (!tempPassword) {
+            // 12 char secure password using base64 and replacing non-url-safe chars
+            tempPassword = crypto.randomBytes(9).toString('base64').replace(/[^A-Za-z0-9@#\$%\^&\*]/g, 'A').slice(0, 12);
+        }
+
+        // Set the password and mark mustChangePassword so they update on next login
+        user.password = tempPassword;
+        user.mustChangePassword = true;
+        await user.save();
+
+        return {
+            success: true,
+            status: 200,
+            message: 'Password reset successfully',
+            data: {
+                email: user.email,
+                tempPassword
+            }
+        };
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            throw new AppError(400, messages.join(', '));
+        }
+        throw error;
+    }
+};
+
+module.exports.adminResetPasswordService = adminResetPasswordService;
