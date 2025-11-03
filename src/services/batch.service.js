@@ -249,3 +249,61 @@ module.exports = {
 
 module.exports.removeStudentsFromBatch = removeStudentsFromBatch;
 module.exports.removeTeacherFromBatch = removeTeacherFromBatch;
+
+/**
+ * Move students from one batch to another.
+ * Ensures students are removed from the source batch and added to the destination batch,
+ * and keeps User.assignedBatch in sync.
+ * @param {String} fromBatchId
+ * @param {String} toBatchId
+ * @param {Array<String>} students
+ */
+const moveStudentsBetweenBatches = async (fromBatchId, toBatchId, students = []) => {
+  try {
+    if (!fromBatchId || !toBatchId) {
+      throw new AppError(400, 'fromBatchId and toBatchId are required');
+    }
+
+    if (!Array.isArray(students) || students.length === 0) {
+      throw new AppError(400, 'Students array must not be empty');
+    }
+
+    // Normalize unique list
+    const uniqueStudents = Array.from(new Set(students.map(s => String(s))));
+
+    // Load batches
+    const fromBatch = await Batch.findById(fromBatchId);
+    if (!fromBatch) throw new AppError(404, `Source batch not found: ${fromBatchId}`);
+
+    const toBatch = await Batch.findById(toBatchId);
+    if (!toBatch) throw new AppError(404, `Destination batch not found: ${toBatchId}`);
+
+    // Ensure all students exist in source batch
+    const sourceStudentIds = (fromBatch.students || []).map(id => String(id));
+    const notPresent = uniqueStudents.filter(sid => !sourceStudentIds.includes(String(sid)));
+    if (notPresent.length > 0) {
+      throw new AppError(400, `Students not present in source batch: ${notPresent.join(', ')}`);
+    }
+
+    // Remove students from source batch
+    await Batch.updateOne({ _id: fromBatchId }, { $pull: { students: { $in: uniqueStudents } } });
+
+    // Add students to destination batch (avoid duplicates)
+    await Batch.updateOne({ _id: toBatchId }, { $addToSet: { students: { $each: uniqueStudents } } });
+
+    // Update users: remove source batch reference, add destination batch
+    await User.updateMany({ _id: { $in: uniqueStudents } }, { $pull: { assignedBatch: fromBatch._id } });
+    await User.updateMany({ _id: { $in: uniqueStudents } }, { $addToSet: { assignedBatch: toBatch._id } });
+
+    // Return updated destination batch populated
+    const updated = await Batch.findById(toBatchId)
+      .populate({ path: 'teacher', select: 'fullName email roleName assignedBatch' })
+      .populate({ path: 'students', select: 'fullName email roleName assignedBatch' });
+
+    return { success: true, message: 'Students moved successfully', data: updated };
+  } catch (error) {
+    throw error;
+  }
+};
+
+module.exports.moveStudentsBetweenBatches = moveStudentsBetweenBatches;

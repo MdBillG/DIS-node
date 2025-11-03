@@ -9,7 +9,8 @@ const {
   assignStudentsController,
   assignTeacherController,
   removeStudentsController,
-  removeTeacherController
+  removeTeacherController,
+  moveStudentsController
 } = require('../controllers/batch.controller');
 
 const { verifyToken, hasRole, hasPermission } = require('../middleware/auth');
@@ -52,6 +53,13 @@ router.post('/:id/assign-students',
   hasRole('admin', 'principal', 'teacher'),
   hasPermission('batch', 'update'),
   assignStudentsController
+);
+
+// Move students from one batch to another (remove from source batch)
+router.post('/:id/move-students',
+  hasRole('admin', 'principal', 'teacher'),
+  hasPermission('batch', 'update'),
+  moveStudentsController
 );
 
 // Assign teacher

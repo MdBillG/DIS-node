@@ -111,6 +111,28 @@ const removeTeacherController = async (req, res, next) => {
   }
 };
 
+// Move students from one batch to another
+const moveStudentsController = async (req, res, next) => {
+  try {
+    const fromBatchId = req.params.id;
+    const { toBatchId, students } = req.body;
+
+    if (!toBatchId) {
+      return res.status(400).json({ success: false, message: 'toBatchId is required' });
+    }
+
+    if (!Array.isArray(students) || students.length === 0) {
+      return res.status(400).json({ success: false, message: 'students array is required' });
+    }
+
+    const { moveStudentsBetweenBatches } = require('../services/batch.service');
+    const result = await moveStudentsBetweenBatches(fromBatchId, toBatchId, students);
+    res.status(200).json({ success: true, message: result.message, data: result.data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Final exports
 module.exports = {
   createBatchController,
@@ -121,5 +143,6 @@ module.exports = {
   assignStudentsController,
   assignTeacherController,
   removeStudentsController,
-  removeTeacherController
+  removeTeacherController,
+  moveStudentsController
 };
